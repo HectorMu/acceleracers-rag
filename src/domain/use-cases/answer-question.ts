@@ -83,10 +83,20 @@ export class AnswerQuestionUseCase {
       .filter(s => { const k = s.title; return seen.has(k) ? false : (seen.add(k), true) })
   }
 
+  private buildSearchQuery(query: Query): string {
+    if (!query.history || query.history.length === 0) return query.text
+    const userMessages = query.history
+      .filter(m => m.role === 'user')
+      .slice(-2)
+      .map(m => m.content)
+    return [...userMessages, query.text].join(' ')
+  }
+
   private buildPrompt(query: Query, context: string): string {
     let historyBlock = ''
     if (query.history && query.history.length > 0) {
-      historyBlock = '\n\nCONVERSATION HISTORY:\n' + query.history
+      const recent = query.history.slice(-6)
+      historyBlock = '\n\nCONVERSATION HISTORY:\n' + recent
         .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n')
     }
@@ -94,8 +104,9 @@ export class AnswerQuestionUseCase {
   }
 
   async execute(query: Query): Promise<Answer> {
-    const queryVector = await this.embedder.embed(query.text)
-    const results = await this.indexRepo.querySimilar(queryVector, this.topK * 5, query.text)
+    const searchQuery = this.buildSearchQuery(query)
+    const queryVector = await this.embedder.embed(searchQuery)
+    const results = await this.indexRepo.querySimilar(queryVector, this.topK * 5, searchQuery)
 
     const sources = this.deduplicateSources(results)
 
@@ -116,8 +127,9 @@ export class AnswerQuestionUseCase {
   }
 
   async *stream(query: Query): AsyncIterable<string> {
-    const queryVector = await this.embedder.embed(query.text)
-    const results = await this.indexRepo.querySimilar(queryVector, this.topK * 5, query.text)
+    const searchQuery = this.buildSearchQuery(query)
+    const queryVector = await this.embedder.embed(searchQuery)
+    const results = await this.indexRepo.querySimilar(queryVector, this.topK * 5, searchQuery)
 
     const sources = this.deduplicateSources(results)
 

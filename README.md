@@ -4,6 +4,17 @@
 
 Ask questions about characters, realms, accelechargers, drivers, and teams. The system scrapes the [Acceleracers Fandom Wiki](https://acceleracers.fandom.com), indexes it into a local vector store, and answers with context retrieved from the corpus + an LLM.
 
+**Features:**
+- 🔎 Hybrid search (dense vectors + BM25) with MMR diversity reranking
+- 💬 Chat history sidebar with localStorage persistence
+- 🧠 Conversation context sent to the LLM across turns
+- 📝 Markdown rendering for responses
+- 🚦 Guardrails (rate limiting, max length)
+- 🟢 Connection status indicator + periodic health checks
+- 🔔 Toast notifications for transient errors (rate limits, validation)
+- ⚠️ Inline error bubbles for server/network failures
+- 🔗 Source preview popover on hover
+
 ### Demo
 
 https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
@@ -12,41 +23,45 @@ https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
 ## Architecture
 
 ```
-┌──────────┐     ┌──────────────────────────────────────┐
-│  Client  │     │            Hono Server                │
-│ (React ) │────>│  POST /api/chat  → SSE stream         │
-│          │     │  POST /api/query → JSON               │
-│          │     │  GET  /api/health                      │
-└──────────┘     │                                        │
-                 │  ┌────────────────────────────────┐    │
-                 │  │   Application (RAGService)      │    │
-                 │  │   orchestrates use cases        │    │
-                 │  └──────────┬─────────────────────┘    │
-                 │             │                           │
-                 │  ┌──────────▼─────────────────────┐    │
-                 │  │         Domain                   │    │
-                 │  │  Entities · Use Cases · Ports    │    │
-                 │  └──────────┬─────────────────────┘    │
-                 │             │                           │
-                 │  ┌──────────▼─────────────────────┐    │
-                 │  │       Infrastructure             │    │
-                 │  │  Ollama · Vectra · Fandom        │    │
-                 │  └────────────────────────────────┘    │
-                 └──────────────────────────────────────────┘
+┌──────────────────┐     ┌──────────────────────────────────────────┐
+│   React Client   │     │            Hono Server                    │
+│  Tailwind CSS v4 │────>│  POST /api/chat  → SSE stream             │
+│  react-markdown  │     │  POST /api/query → JSON                   │
+│  lucide-react    │     │  GET  /api/health                          │
+│                  │     │  Guardrails (rate-limit, max length)       │
+└──────────────────┘     │                                            │
+                         │  ┌────────────────────────────────────┐    │
+                         │  │   Application (RAGService)          │    │
+                         │  │   orchestrates use cases            │    │
+                         │  └──────────┬─────────────────────────┘    │
+                         │             │                               │
+                         │  ┌──────────▼─────────────────────────┐    │
+                         │  │         Domain                       │    │
+                         │  │  Entities · Use Cases · Ports        │    │
+                         │  │  MMR reranking · Conversation hist.  │    │
+                         │  └──────────┬─────────────────────────┘    │
+                         │             │                               │
+                         │  ┌──────────▼─────────────────────────┐    │
+                         │  │       Infrastructure                 │    │
+                         │  │  Ollama · Vectra · MiniSearch (BM25) │    │
+                         │  │  Fandom scraper · Cheerio            │    │
+                         │  └────────────────────────────────────┘    │
+                         └──────────────────────────────────────────────┘
 ```
 
 **Clean Architecture layers:**
 - `src/domain/` — Entities, repository interfaces, use cases (zero external deps)
 - `src/application/` — Service orchestration + config ports
-- `src/infrastructure/` — Adapters: Ollama (embedding + LLM), Vectra (vector store), Fandom (scraper)
+- `src/infrastructure/` — Adapters: Ollama (embedding + LLM), Vectra (vector store), MiniSearch (BM25), Fandom (scraper)
 - `src/presentation/` — CLI REPL + Hono HTTP server with SSE streaming
 
 **RAG pipeline:**
 1. Scrape Fandom wiki → `data/corpus.json`
 2. Semantic chunking (paragraph-aware, not fixed-size)
 3. Embed chunks via Ollama `nomic-embed-text` → store in Vectra `LocalIndex`
-4. Dense vector similarity search for retrieval
-5. Generate answer via Ollama `llama3.1:8b` with retrieved context
+4. Hybrid retrieval: dense vector search + BM25 (MiniSearch) with RRF fusion
+5. MMR diversity reranking (Jaccard similarity, λ=0.6) → top K chunks
+6. Generate answer via Ollama `llama3.1:8b` with retrieved context + conversation history
 
 ## Quick Start
 
@@ -112,8 +127,14 @@ Environment variables (see `.env.example`):
 ### POST `/api/chat` — Streaming SSE
 
 ```json
-{ "message": "Who is Vert Wheeler?" }
+{
+  "message": "Who is Vert Wheeler?",
+  "history": [{ "role": "user", "content": "..." }, { "role": "assistant", "content": "..." }]
+}
 ```
+
+`history` is optional — include previous messages for conversation context.
+
 Returns SSE events:
 ```
 event: token
@@ -123,14 +144,19 @@ event: token
 data: {"token":" Wheeler"}
 
 event: done
-data: {"answer":"Vert Wheeler is...","sources":[{"title":"Vert Wheeler","url":"..."}]}
+data: {"answer":"Vert Wheeler is...","sources":[{"title":"Vert Wheeler","url":"...","excerpt":"..."}]}
+
+event: error
+data: {"error":"Generation failed"}
 ```
+
+The `error` event is sent if the LLM fails mid-stream.
 
 ### POST `/api/query` — Non-streaming JSON
 
 ```json
 { "message": "Who is Vert Wheeler?" }
-// Response: { "text": "Vert Wheeler is...", "sources": [{"title":"...","url":"..."}] }
+// Response: { "text": "Vert Wheeler is...", "sources": [{"title":"...","url":"...","excerpt":"..."}] }
 ```
 
 ### GET `/api/health`
@@ -151,11 +177,13 @@ Both are gitignored. Delete `data/corpus.json` to trigger a re-scrape.
 | Layer | Technology |
 |---|---|
 | Server | Hono, TypeScript |
-| Client | React 19, Vite, Tailwind CSS v4 |
+| Client | React 19, Vite, Tailwind CSS v4, lucide-react |
 | LLM | Ollama (llama3.1:8b) |
 | Embeddings | Ollama (nomic-embed-text) |
 | Vector Store | Vectra (local) |
+| BM25 Search | MiniSearch |
 | Scraping | Cheerio, Fandom API |
+| Rendering | react-markdown, remark-gfm |
 
 ## License
 

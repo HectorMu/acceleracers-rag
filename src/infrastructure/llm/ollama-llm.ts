@@ -1,0 +1,39 @@
+﻿import type { LLMService } from '../../domain/repositories/llm-service.js'
+
+export class OllamaLLM implements LLMService {
+  constructor(
+    private readonly url: string,
+    private readonly model: string
+  ) {}
+
+  async *generate(prompt: string): AsyncIterable<string> {
+    const res = await fetch(`${this.url}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: this.model, prompt, stream: true }),
+    })
+
+    const reader = res.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          const json = JSON.parse(trimmed)
+          if (json.response) yield json.response
+          if (json.done) return
+        } catch {}
+      }
+    }
+  }
+}

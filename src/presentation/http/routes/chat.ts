@@ -24,7 +24,7 @@ export function chatRoute(rag: RAGService) {
       let gotDone = false
       for await (const token of gen) {
         if (token.startsWith('||SOURCES||')) {
-          let sources: { title: string; url: string }[] = []
+          let sources: { title: string; url: string; excerpt?: string }[] = []
           try {
             sources = JSON.parse(token.slice(11))
           } catch {

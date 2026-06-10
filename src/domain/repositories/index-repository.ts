@@ -5,5 +5,5 @@ export interface IndexRepository {
   create(): Promise<void>
   clear(): Promise<void>
   upsertChunk(chunk: Chunk, vector: number[]): Promise<void>
-  querySimilar(vector: number[], topK: number): Promise<{ chunk: Chunk; score: number }[]>
+  querySimilar(vector: number[], topK: number, query?: string): Promise<{ chunk: Chunk; score: number }[]>
 }

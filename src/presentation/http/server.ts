@@ -7,11 +7,14 @@ import { chatRoute } from './routes/chat.js'
 import { queryRoute } from './routes/query.js'
 import { healthRoute } from './routes/health.js'
 import { errorHandler } from './middleware/error-handler.js'
+import { rateLimit, maxLength } from './middleware/guardrails.js'
 
 export function createServer(rag: RAGService, config: AppConfig) {
   const app = new Hono()
 
   app.use('*', cors())
+  app.use('/api/chat', rateLimit(), maxLength(500))
+  app.use('/api/query', rateLimit(), maxLength(500))
   app.onError(errorHandler)
 
   app.route('/api/chat', chatRoute(rag))

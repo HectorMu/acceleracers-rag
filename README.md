@@ -5,7 +5,8 @@
 Ask questions about characters, realms, accelechargers, drivers, and teams. The system scrapes the [Acceleracers Fandom Wiki](https://acceleracers.fandom.com), indexes it into a local vector store, and answers with context retrieved from the corpus + an LLM.
 
 ### Demo
-https://github.com/user-attachments/assets/a8ca59bc-ff10-46c8-8bd5-deb2d55769dc
+
+https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
 
 
 ## Architecture

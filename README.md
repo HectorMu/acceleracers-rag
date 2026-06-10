@@ -45,7 +45,7 @@ https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
 1. Scrape Fandom wiki → `data/corpus.json`
 2. Semantic chunking (paragraph-aware, not fixed-size)
 3. Embed chunks via Ollama `nomic-embed-text` → store in Vectra `LocalIndex`
-4. Hybrid search (dense vector + BM25) for retrieval
+4. Dense vector similarity search for retrieval
 5. Generate answer via Ollama `llama3.1:8b` with retrieved context
 
 ## Quick Start
@@ -59,26 +59,36 @@ https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
   ollama pull nomic-embed-text
   ```
 
-### Server
+### Install
 
 ```bash
-# Install & run
+# Install server dependencies
 npm install
-npm run dev        # starts HTTP server on :3000
 
-# Or use CLI mode:
-npm run cli        # interactive REPL
+# Install client dependencies (separate terminal or use full dev mode)
+cd client && npm install && cd ..
 ```
 
-### Client
+### Run (server + client together)
 
 ```bash
-cd client
-npm install
-npm run dev        # starts Vite dev server on :5173
+npm run dev        # starts both server (:3000) and client (:5173) concurrently
 ```
 
 Open `http://localhost:5173` and start chatting.
+
+### Run individually
+
+```bash
+npm run dev:server   # Hono API server on http://localhost:3000
+npm run dev:client   # Vite dev server on http://localhost:5173
+```
+
+### CLI mode (no browser needed)
+
+```bash
+npm run cli          # interactive REPL
+```
 
 ### Docker
 
@@ -144,7 +154,7 @@ Both are gitignored. Delete `data/corpus.json` to trigger a re-scrape.
 | Client | React 19, Vite, Tailwind CSS v4 |
 | LLM | Ollama (llama3.1:8b) |
 | Embeddings | Ollama (nomic-embed-text) |
-| Vector Store | Vectra (local, with BM25 hybrid search) |
+| Vector Store | Vectra (local) |
 | Scraping | Cheerio, Fandom API |
 
 ## License

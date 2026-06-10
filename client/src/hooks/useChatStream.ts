@@ -10,7 +10,6 @@ interface UseChatStreamOptions {
   conversationId: string | null
   history: Message[]
   onAddMessage: (id: string, msg: Message) => void
-  onUpdateLastMessage: (id: string, content: string, sources?: Message['sources']) => void
   onToast?: (message: string, type: 'error' | 'warning' | 'info') => void
 }
 
@@ -31,7 +30,7 @@ function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError'
 }
 
-export function useChatStream({ conversationId, history, onAddMessage, onUpdateLastMessage, onToast }: UseChatStreamOptions) {
+export function useChatStream({ conversationId, history, onAddMessage, onToast }: UseChatStreamOptions) {
   const [streamingText, setStreamingText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
 
@@ -69,6 +68,7 @@ export function useChatStream({ conversationId, history, onAddMessage, onUpdateL
       const decoder = new TextDecoder()
       let buffer = ''
       let fullAnswer = ''
+      let doneProcessed = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -88,7 +88,7 @@ export function useChatStream({ conversationId, history, onAddMessage, onUpdateL
               const parsed = JSON.parse(data)
 
               if (parsed.error) {
-                onUpdateLastMessage(conversationId, `**Error:** ${parsed.error}`)
+                onAddMessage(conversationId, { role: 'assistant', content: `**Error:** ${parsed.error}` })
                 setStreamingText('')
                 return
               }
@@ -99,8 +99,9 @@ export function useChatStream({ conversationId, history, onAddMessage, onUpdateL
               }
 
               if (parsed.sources) {
-                onUpdateLastMessage(conversationId, fullAnswer, parsed.sources)
+                onAddMessage(conversationId, { role: 'assistant', content: fullAnswer, sources: parsed.sources })
                 setStreamingText('')
+                doneProcessed = true
               }
             } catch {
               // skip malformed SSE data
@@ -109,8 +110,8 @@ export function useChatStream({ conversationId, history, onAddMessage, onUpdateL
         }
       }
 
-      if (fullAnswer) {
-        onUpdateLastMessage(conversationId, fullAnswer)
+      if (fullAnswer && !doneProcessed) {
+        onAddMessage(conversationId, { role: 'assistant', content: fullAnswer })
         setStreamingText('')
       }
     } catch (err) {
@@ -130,7 +131,7 @@ export function useChatStream({ conversationId, history, onAddMessage, onUpdateL
       setIsStreaming(false)
       setStreamingText('')
     }
-  }, [conversationId, history, onAddMessage, onUpdateLastMessage, onToast])
+  }, [conversationId, history, onAddMessage, onToast])
 
   return { streamingText, isStreaming, sendMessage }
 }

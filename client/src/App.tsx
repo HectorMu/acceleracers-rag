@@ -23,7 +23,7 @@ const SUGGESTIONS = [
 export default function App() {
   const {
     conversations, activeId, activeConversation,
-    createConversation, deleteConversation, addMessage, updateLastMessage, switchConversation,
+    createConversation, deleteConversation, addMessage, switchConversation,
   } = useConversations()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [connected, setConnected] = useState(true)
@@ -49,7 +49,6 @@ export default function App() {
     conversationId: activeId,
     history,
     onAddMessage: addMessage,
-    onUpdateLastMessage: updateLastMessage,
     onToast,
   })
 

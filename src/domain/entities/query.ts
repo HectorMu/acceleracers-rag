@@ -1,5 +1,6 @@
 export interface Query {
   text: string
+  history?: { role: 'user' | 'assistant'; content: string }[]
 }
 
 export interface Answer {

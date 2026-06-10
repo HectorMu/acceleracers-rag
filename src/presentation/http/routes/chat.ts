@@ -7,9 +7,11 @@ export function chatRoute(rag: RAGService) {
 
   app.post('/', async (c) => {
     let message: string
+    let history: { role: 'user' | 'assistant'; content: string }[] | undefined
     try {
       const body = await c.req.json()
       message = body.message
+      history = body.history
     } catch {
       return c.json({ error: 'invalid JSON body' }, 400)
     }
@@ -18,7 +20,7 @@ export function chatRoute(rag: RAGService) {
     }
 
     return streamSSE(c, async (stream) => {
-      const gen = rag.streamAnswer({ text: message })
+      const gen = rag.streamAnswer({ text: message, history })
       let fullAnswer = ''
 
       let gotDone = false

@@ -5,8 +5,8 @@ import type { LLMService } from '../repositories/llm-service.js'
 import type { Chunk } from '../entities/chunk.js'
 
 const SYSTEM_PROMPT = `You are an expert on the Hot Wheels Acceleracers universe.
-Answer ONLY using the context below. If the answer isn't there, say you don't have that information.
-Answer in the same language the user used.`
+Answer ONLY using the provided context. If the answer isn't there, say you don't have that information.
+Answer in the same language the user used. Use the conversation history for context.`
 
 const HALLUCINATION_PROMPT = `You are a fact-checker. Your job is to check if each statement in the ANSWER is directly supported by the CONTEXT.
 For each statement, determine if it is SUPPORTED or UNSUPPORTED.
@@ -83,6 +83,16 @@ export class AnswerQuestionUseCase {
       .filter(s => { const k = s.title; return seen.has(k) ? false : (seen.add(k), true) })
   }
 
+  private buildPrompt(query: Query, context: string): string {
+    let historyBlock = ''
+    if (query.history && query.history.length > 0) {
+      historyBlock = '\n\nCONVERSATION HISTORY:\n' + query.history
+        .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+        .join('\n')
+    }
+    return `${SYSTEM_PROMPT}\n\nCONTEXT:\n${context}${historyBlock}\n\nQUESTION: ${query.text}\n\nANSWER:`
+  }
+
   async execute(query: Query): Promise<Answer> {
     const queryVector = await this.embedder.embed(query.text)
     const results = await this.indexRepo.querySimilar(queryVector, this.topK * 5, query.text)
@@ -95,7 +105,7 @@ export class AnswerQuestionUseCase {
 
     const reranked = mmrSelect(results, this.topK)
     const context = reranked.map(r => r.chunk.text).join('\n\n---\n\n')
-    const prompt = `${SYSTEM_PROMPT}\n\nCONTEXT:\n${context}\n\nQUESTION: ${query.text}\n\nANSWER:`
+    const prompt = this.buildPrompt(query, context)
 
     let text = ''
     for await (const token of this.llm.generate(prompt)) {
@@ -119,7 +129,7 @@ export class AnswerQuestionUseCase {
 
     const reranked = mmrSelect(results, this.topK)
     const context = reranked.map(r => r.chunk.text).join('\n\n---\n\n')
-    const prompt = `${SYSTEM_PROMPT}\n\nCONTEXT:\n${context}\n\nQUESTION: ${query.text}\n\nANSWER:`
+    const prompt = this.buildPrompt(query, context)
 
     for await (const token of this.llm.generate(prompt)) {
       yield token

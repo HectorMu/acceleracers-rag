@@ -3,17 +3,24 @@ import { useState, useCallback } from 'react'
 export interface Message {
   role: 'user' | 'assistant'
   content: string
-  sources?: { title: string; url: string }[]
+  sources?: { title: string; url: string; excerpt?: string }[]
 }
 
-export function useChatStream() {
-  const [messages, setMessages] = useState<Message[]>([])
+interface UseChatStreamOptions {
+  conversationId: string | null
+  history: Message[]
+  onAddMessage: (id: string, msg: Message) => void
+  onUpdateLastMessage: (id: string, content: string, sources?: Message['sources']) => void
+}
+
+export function useChatStream({ conversationId, history, onAddMessage, onUpdateLastMessage }: UseChatStreamOptions) {
   const [streamingText, setStreamingText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
 
   const sendMessage = useCallback(async (text: string) => {
+    if (!conversationId) return
     const userMsg: Message = { role: 'user', content: text }
-    setMessages(prev => [...prev, userMsg])
+    onAddMessage(conversationId, userMsg)
     setIsStreaming(true)
     setStreamingText('')
 
@@ -21,11 +28,10 @@ export function useChatStream() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       })
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-
       if (!response.body) throw new Error('Response has no body')
 
       const reader = response.body.getReader()
@@ -56,12 +62,7 @@ export function useChatStream() {
               }
 
               if (parsed.sources) {
-                const assistantMsg: Message = {
-                  role: 'assistant',
-                  content: fullAnswer,
-                  sources: parsed.sources,
-                }
-                setMessages(prev => [...prev, assistantMsg])
+                onUpdateLastMessage(conversationId, fullAnswer, parsed.sources)
                 setStreamingText('')
               }
             } catch {
@@ -71,24 +72,18 @@ export function useChatStream() {
         }
       }
 
-      // Connection closed without a done event — save partial answer
       if (fullAnswer) {
-        setMessages(prev => {
-          // Check if the last message is already this answer
-          const last = prev[prev.length - 1]
-          if (last?.role === 'assistant' && last.content === fullAnswer) return prev
-          return [...prev, { role: 'assistant', content: fullAnswer, sources: [] }]
-        })
+        onUpdateLastMessage(conversationId, fullAnswer)
         setStreamingText('')
       }
     } catch (err) {
       console.error('Chat error:', err)
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Is the server running?' }])
+      onAddMessage(conversationId, { role: 'assistant', content: 'Sorry, something went wrong. Is the server running?' })
     } finally {
       setIsStreaming(false)
       setStreamingText('')
     }
-  }, [])
+  }, [conversationId, history, onAddMessage, onUpdateLastMessage])
 
-  return { messages, streamingText, isStreaming, sendMessage }
+  return { streamingText, isStreaming, sendMessage }
 }

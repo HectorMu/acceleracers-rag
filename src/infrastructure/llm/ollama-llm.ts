@@ -7,16 +7,11 @@ export class OllamaLLM implements LLMService {
   ) {}
 
   async *generate(prompt: string): AsyncIterable<string> {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 60000)
-
     const res = await fetch(`${this.url}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.model, prompt, stream: true }),
-      signal: controller.signal,
     })
-    clearTimeout(timeout)
 
     if (!res.ok) {
       throw new Error(`Ollama returned ${res.status}: ${await res.text().catch(() => 'unknown error')}`)

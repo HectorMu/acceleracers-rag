@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono'
+import { Hono } from 'hono'
 import type { RAGService } from '../../../application/services/rag.service.js'
 
 export function queryRoute(rag: RAGService) {

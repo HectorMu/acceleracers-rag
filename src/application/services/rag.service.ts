@@ -1,4 +1,4 @@
-﻿import type { AppConfig } from '../ports/config.js'
+import type { AppConfig } from '../ports/config.js'
 import type { CorpusRepository } from '../../domain/repositories/corpus-repository.js'
 import type { IndexRepository } from '../../domain/repositories/index-repository.js'
 import type { EmbeddingService } from '../../domain/repositories/embedding-service.js'

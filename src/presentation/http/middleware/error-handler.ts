@@ -1,4 +1,4 @@
-﻿import type { ErrorHandler } from 'hono'
+import type { ErrorHandler } from 'hono'
 
 export const errorHandler: ErrorHandler = (err, c) => {
   console.error('❌', err)

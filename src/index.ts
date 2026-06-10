@@ -1,4 +1,4 @@
-﻿import { loadConfig } from './infrastructure/config/env-config.js'
+import { loadConfig } from './infrastructure/config/env-config.js'
 import { FandomScraper } from './infrastructure/scraping/fandom-scraper.js'
 import { FileCorpusRepository } from './infrastructure/scraping/corpus-repository.js'
 import { VectraIndexRepository } from './infrastructure/vector-store/vectra-index.js'
@@ -24,9 +24,8 @@ async function main() {
 
   const rag = new RAGService(config, corpusRepo, indexRepo, embedder, llm, scraper)
 
-  const mode = process.argv.includes('--mode') 
-    ? process.argv[process.argv.indexOf('--mode') + 1] 
-    : 'server'
+  const modeIdx = process.argv.indexOf('--mode')
+  const mode = modeIdx !== -1 && process.argv[modeIdx + 1] ? process.argv[modeIdx + 1] : 'server'
 
   if (mode === 'cli') {
     await rag.initialize()
@@ -38,6 +37,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('\n❌ Error:', err.message)
+  console.error('\n❌ Error:', err instanceof Error ? err.message : String(err))
   process.exit(1)
 })

@@ -1,4 +1,4 @@
-﻿import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio'
 import type { WikiPage } from '../../domain/entities/wiki-page.js'
 import type { WikiScraper } from '../../domain/repositories/wiki-scraper.js'
 

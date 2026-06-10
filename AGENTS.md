@@ -1,4 +1,4 @@
-﻿# AcceleRAG — Agent Context
+# AcceleRAG — Agent Context
 
 ## Architecture
 Clean Architecture with 4 layers:

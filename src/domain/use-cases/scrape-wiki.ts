@@ -1,4 +1,4 @@
-﻿import type { CorpusRepository } from '../repositories/corpus-repository.js'
+import type { CorpusRepository } from '../repositories/corpus-repository.js'
 import type { WikiScraper } from '../repositories/wiki-scraper.js'
 
 export class ScrapeWikiUseCase {

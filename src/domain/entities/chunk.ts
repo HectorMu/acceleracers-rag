@@ -1,4 +1,4 @@
-﻿export interface Chunk {
+export interface Chunk {
   id?: string
   text: string
   source: string

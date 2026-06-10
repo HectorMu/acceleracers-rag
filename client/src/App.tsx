@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChatInterface } from './components/ChatInterface.js'
 import { MessageBubble } from './components/MessageBubble.js'
 import { StreamingText } from './components/StreamingText.js'
@@ -8,7 +8,7 @@ import { useChatStream } from './hooks/useChatStream.js'
 import { Bot, Sparkles } from 'lucide-react'
 
 export default function App() {
-  const { messages, streamingText, isStreaming, sources, sendMessage } = useChatStream()
+  const { messages, streamingText, isStreaming, sendMessage } = useChatStream()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -53,22 +53,9 @@ export default function App() {
           </div>
         ))}
 
-        {isStreaming && streamingText && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <MessageBubble role="assistant" content="" />
-            <StreamingText text={streamingText} />
-          </div>
-        )}
+        {isStreaming && streamingText && <StreamingText text={streamingText} />}
 
         {isStreaming && !streamingText && <ThinkingIndicator />}
-
-        {sources.length > 0 && !isStreaming && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingLeft: '3rem' }}>
-            {sources.map((s, j) => (
-              <SourceCard key={j} title={s.title} url={s.url} />
-            ))}
-          </div>
-        )}
 
         <div ref={bottomRef} />
       </main>

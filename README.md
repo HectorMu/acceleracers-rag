@@ -1,4 +1,4 @@
-﻿# 🏎️ AcceleRAG
+# 🏎️ AcceleRAG
 
 **Acceleracers Knowledge Base** — a RAG-powered chatbot for the Hot Wheels Acceleracers universe.
 

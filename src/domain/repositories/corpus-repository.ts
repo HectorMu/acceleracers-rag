@@ -1,4 +1,4 @@
-﻿import type { WikiPage } from '../entities/wiki-page.js'
+import type { WikiPage } from '../entities/wiki-page.js'
 
 export interface CorpusRepository {
   exists(): Promise<boolean>

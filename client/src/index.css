@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @theme {
   --color-accent-1: #ff6b35;
@@ -23,3 +23,12 @@ body {
 }
 
 #root { min-height: 100vh; display: flex; flex-direction: column; }
+
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.cursor-blink { animation: blink 0.8s step-end infinite; }
+.thinking-dot { animation: bounce 1.4s ease-in-out infinite; }

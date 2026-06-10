@@ -1,4 +1,4 @@
-﻿import { useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 
 export interface Message {
   role: 'user' | 'assistant'
@@ -10,14 +10,12 @@ export function useChatStream() {
   const [messages, setMessages] = useState<Message[]>([])
   const [streamingText, setStreamingText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [sources, setSources] = useState<{ title: string; url: string }[]>([])
 
   const sendMessage = useCallback(async (text: string) => {
     const userMsg: Message = { role: 'user', content: text }
     setMessages(prev => [...prev, userMsg])
     setIsStreaming(true)
     setStreamingText('')
-    setSources([])
 
     try {
       const response = await fetch('/api/chat', {
@@ -28,7 +26,9 @@ export function useChatStream() {
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
 
-      const reader = response.body!.getReader()
+      if (!response.body) throw new Error('Response has no body')
+
+      const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       let fullAnswer = ''
@@ -43,9 +43,7 @@ export function useChatStream() {
 
         for (const line of lines) {
           const trimmed = line.trim()
-
-          if (trimmed.startsWith('event: token')) continue
-          if (trimmed.startsWith('event: done')) continue
+          if (!trimmed || trimmed.startsWith('event:')) continue
 
           if (trimmed.startsWith('data: ')) {
             const data = trimmed.slice(6)
@@ -58,7 +56,6 @@ export function useChatStream() {
               }
 
               if (parsed.sources) {
-                setSources(parsed.sources)
                 const assistantMsg: Message = {
                   role: 'assistant',
                   content: fullAnswer,
@@ -67,14 +64,22 @@ export function useChatStream() {
                 setMessages(prev => [...prev, assistantMsg])
                 setStreamingText('')
               }
-
-              if (parsed.answer && !parsed.token) {
-                fullAnswer = parsed.answer
-                setStreamingText(fullAnswer)
-              }
-            } catch {}
+            } catch {
+              // skip malformed SSE data
+            }
           }
         }
+      }
+
+      // Connection closed without a done event — save partial answer
+      if (fullAnswer) {
+        setMessages(prev => {
+          // Check if the last message is already this answer
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && last.content === fullAnswer) return prev
+          return [...prev, { role: 'assistant', content: fullAnswer, sources: [] }]
+        })
+        setStreamingText('')
       }
     } catch (err) {
       console.error('Chat error:', err)
@@ -85,5 +90,5 @@ export function useChatStream() {
     }
   }, [])
 
-  return { messages, streamingText, isStreaming, sources, sendMessage }
+  return { messages, streamingText, isStreaming, sendMessage }
 }

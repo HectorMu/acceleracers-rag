@@ -1,4 +1,4 @@
-﻿interface Props {
+interface Props {
   role: 'user' | 'assistant'
   content: string
 }
@@ -36,7 +36,7 @@ export function MessageBubble({ role, content }: Props) {
           wordBreak: 'break-word',
         }}
       >
-        {content || <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Thinking...</span>}
+        {content || <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>(empty response)</span>}
       </div>
     </div>
   )

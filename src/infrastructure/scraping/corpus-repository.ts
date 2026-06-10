@@ -1,4 +1,4 @@
-﻿import { writeFile, readFile, mkdir } from 'fs/promises'
+import { writeFile, readFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import type { WikiPage } from '../../domain/entities/wiki-page.js'

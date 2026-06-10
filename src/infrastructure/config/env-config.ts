@@ -1,4 +1,4 @@
-﻿import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import type { AppConfig } from '../../application/ports/config.js'
 
 export function loadConfig(): AppConfig {

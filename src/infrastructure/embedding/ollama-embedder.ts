@@ -1,4 +1,4 @@
-﻿import type { EmbeddingService } from '../../domain/repositories/embedding-service.js'
+import type { EmbeddingService } from '../../domain/repositories/embedding-service.js'
 
 export class OllamaEmbedder implements EmbeddingService {
   constructor(

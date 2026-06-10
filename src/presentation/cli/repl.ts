@@ -1,4 +1,4 @@
-﻿import * as readline from 'readline'
+import * as readline from 'readline'
 import type { RAGService } from '../../application/services/rag.service.js'
 import type { AppConfig } from '../../application/ports/config.js'
 
@@ -23,16 +23,23 @@ export function startCLI(rag: RAGService, config: AppConfig) {
       process.stdout.write('\n🤖 ')
       const stream = rag.streamAnswer({ text: q })
       let fullText = ''
+      let hadContent = false
       for await (const token of stream) {
         if (token.startsWith('||SOURCES||')) {
-          const sources = JSON.parse(token.slice(10))
-          console.log(`\n\n📚 Sources: ${sources.map((s: any) => s.title).join(', ')}\n`)
+          try {
+            const sources = JSON.parse(token.slice(11))
+            if (hadContent) console.log()
+            console.log(`\n📚 Sources: ${sources.map((s: any) => s.title).join(', ')}\n`)
+          } catch {
+            console.log('\n⚠️  Could not parse sources')
+          }
         } else {
           process.stdout.write(token)
           fullText += token
+          hadContent = true
         }
       }
-      if (!fullText) console.log('(no response)')
+      if (!hadContent) console.log('(no response)')
       prompt()
     })
   }

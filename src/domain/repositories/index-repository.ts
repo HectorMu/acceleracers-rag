@@ -1,4 +1,4 @@
-﻿import type { Chunk } from '../entities/chunk.js'
+import type { Chunk } from '../entities/chunk.js'
 
 export interface IndexRepository {
   exists(): Promise<boolean>

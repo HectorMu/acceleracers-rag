@@ -1,4 +1,4 @@
-﻿import type { WikiPage } from '../entities/wiki-page.js'
+import type { WikiPage } from '../entities/wiki-page.js'
 import type { Chunk } from '../entities/chunk.js'
 import type { CorpusRepository } from '../repositories/corpus-repository.js'
 import type { IndexRepository } from '../repositories/index-repository.js'

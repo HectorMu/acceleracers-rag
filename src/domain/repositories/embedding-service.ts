@@ -1,3 +1,3 @@
-﻿export interface EmbeddingService {
+export interface EmbeddingService {
   embed(text: string): Promise<number[]>
 }

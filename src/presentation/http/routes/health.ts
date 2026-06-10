@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono'
+import { Hono } from 'hono'
 import type { AppConfig } from '../../../application/ports/config.js'
 
 export function healthRoute(config: AppConfig) {
@@ -6,7 +6,10 @@ export function healthRoute(config: AppConfig) {
 
   app.get('/', async (c) => {
     try {
-      const res = await fetch(`${config.ollama.url}/api/tags`)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      const res = await fetch(`${config.ollama.url}/api/tags`, { signal: controller.signal })
+      clearTimeout(timeout)
       const data: any = await res.json()
       const models = (data.models || []).map((m: any) => m.name)
       return c.json({ status: 'ok', ollama: true, models })

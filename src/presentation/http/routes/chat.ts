@@ -20,37 +20,47 @@ export function chatRoute(rag: RAGService) {
     }
 
     return streamSSE(c, async (stream) => {
-      const gen = rag.streamAnswer({ text: message, history })
-      let fullAnswer = ''
+      try {
+        const gen = rag.streamAnswer({ text: message, history })
+        let fullAnswer = ''
 
-      let gotDone = false
-      for await (const token of gen) {
-        if (token.startsWith('||SOURCES||')) {
-          let sources: { title: string; url: string; excerpt?: string }[] = []
-          try {
-            sources = JSON.parse(token.slice(11))
-          } catch {
-            sources = []
+        let gotDone = false
+        for await (const token of gen) {
+          if (stream.aborted) return
+          if (token.startsWith('||SOURCES||')) {
+            let sources: { title: string; url: string; excerpt?: string }[] = []
+            try {
+              sources = JSON.parse(token.slice(11))
+            } catch {
+              sources = []
+            }
+            await stream.writeSSE({
+              event: 'done',
+              data: JSON.stringify({ answer: fullAnswer, sources }),
+            })
+            gotDone = true
+          } else {
+            fullAnswer += token
+            await stream.writeSSE({
+              event: 'token',
+              data: JSON.stringify({ token }),
+            })
           }
+        }
+
+        if (!gotDone && !stream.aborted) {
           await stream.writeSSE({
             event: 'done',
-            data: JSON.stringify({ answer: fullAnswer, sources }),
-          })
-          gotDone = true
-        } else {
-          fullAnswer += token
-          await stream.writeSSE({
-            event: 'token',
-            data: JSON.stringify({ token }),
+            data: JSON.stringify({ answer: fullAnswer, sources: [] }),
           })
         }
-      }
-
-      if (!gotDone) {
-        await stream.writeSSE({
-          event: 'done',
-          data: JSON.stringify({ answer: fullAnswer, sources: [] }),
-        })
+      } catch (e) {
+        if (!stream.aborted) {
+          await stream.writeSSE({
+            event: 'error',
+            data: JSON.stringify({ error: e instanceof Error ? e.message : 'Generation failed' }),
+          })
+        }
       }
     })
   })

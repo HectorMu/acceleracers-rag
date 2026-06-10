@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { ChatInterface } from './components/ChatInterface.js'
 import { MessageBubble } from './components/MessageBubble.js'
 import { StreamingText } from './components/StreamingText.js'
 import { SourceCard } from './components/SourceCard.js'
 import { ThinkingIndicator } from './components/ThinkingIndicator.js'
 import { Sidebar } from './components/Sidebar.js'
+import { ToastContainer } from './components/ToastContainer.js'
 import { useConversations } from './hooks/useConversations.js'
 import { useChatStream } from './hooks/useChatStream.js'
+import { useToast } from './hooks/useToast.js'
 import { Bot, Sparkles, Menu } from 'lucide-react'
 
 const SUGGESTIONS = [
@@ -24,8 +26,9 @@ export default function App() {
     createConversation, deleteConversation, addMessage, updateLastMessage, switchConversation,
   } = useConversations()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [connected, setConnected] = useState(true)
+  const { toasts, addToast, dismissToast } = useToast()
 
-  // Auto-create first conversation
   useEffect(() => {
     if (!activeId && conversations.length === 0) {
       createConversation()
@@ -38,11 +41,16 @@ export default function App() {
     ? activeConversation.messages.map(m => ({ role: m.role, content: m.content }))
     : []
 
+  const onToast = useCallback((message: string, type: 'error' | 'warning' | 'info') => {
+    addToast(message, type)
+  }, [addToast])
+
   const { streamingText, isStreaming, sendMessage } = useChatStream({
     conversationId: activeId,
     history,
     onAddMessage: addMessage,
     onUpdateLastMessage: updateLastMessage,
+    onToast,
   })
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -50,6 +58,19 @@ export default function App() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [activeConversation?.messages, streamingText])
+
+  // Health check for connection status
+  useEffect(() => {
+    let mounted = true
+    const check = () => {
+      fetch('/api/health')
+        .then(r => { if (mounted) setConnected(r.ok) })
+        .catch(() => { if (mounted) setConnected(false) })
+    }
+    check()
+    const interval = setInterval(check, 15000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
 
   const displayMessages = activeConversation?.messages || []
 
@@ -93,9 +114,18 @@ export default function App() {
             <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em' }}>AcceleRAG</h1>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Acceleracers Knowledge Base</p>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-            <Sparkles size={14} />
-            <span>RAG</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div
+              title={connected ? 'Connected' : 'Server unreachable'}
+              style={{
+                width: '0.5rem',
+                height: '0.5rem',
+                borderRadius: '50%',
+                background: connected ? '#2ecc71' : '#e63946',
+                transition: 'background 0.3s',
+              }}
+            />
+            <Sparkles size={14} style={{ color: 'var(--color-text-secondary)' }} />
           </div>
         </header>
 
@@ -152,8 +182,15 @@ export default function App() {
           <div ref={bottomRef} />
         </main>
 
-        <ChatInterface onSend={handleSend} disabled={isStreaming} />
+        <ChatInterface
+          onSend={handleSend}
+          disabled={isStreaming}
+          maxLength={500}
+          connected={connected}
+        />
       </div>
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   )
 }

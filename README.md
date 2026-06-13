@@ -17,8 +17,7 @@ Ask questions about characters, realms, accelechargers, drivers, and teams. The 
 
 ### Demo
 
-https://github.com/user-attachments/assets/58d4147a-1018-496c-b1b0-a0dd2f7f2ed3
-
+https://github.com/user-attachments/assets/1f29bad0-4057-4f9a-ac70-48e65139fe8a
 
 ## Architecture
 

@@ -4,7 +4,7 @@ import type { AppConfig } from '../../application/ports/config.js'
 
 export function startCLI(rag: RAGService, config: AppConfig) {
   console.log('\n🏎️  AcceleRAG — Acceleracers AI\n' + '═'.repeat(50) + '\n')
-  console.log(`💬  Chat ready — model: ${config.ollama.chatModel}`)
+  console.log(`💬  Chat ready — model: ${config.chat.model}`)
   console.log('   Type your question (or "exit" to quit)\n')
   console.log('─'.repeat(50))
 

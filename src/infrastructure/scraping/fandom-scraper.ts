@@ -61,8 +61,8 @@ export class FandomScraper implements WikiScraper {
     if (!html) return null
 
     const $ = cheerio.load(html)
-    $('.navbox, .infobox, .toc, .mw-editsection, script, style, .noprint, sup, .reference, .reflist').remove()
-    const text = $('body')
+    ;($('.navbox, .infobox, .toc, .mw-editsection, script, style, .noprint, sup, .reference, .reflist') as any).remove()
+    const text = ($('body') as any)
       .text()
       .replace(/\n{3,}/g, '\n\n')
       .replace(/\t/g, ' ')

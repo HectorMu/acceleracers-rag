@@ -1,3 +1,12 @@
+export type Provider = 'groq' | 'ollama'
+
+export interface ProviderConfig {
+  provider: Provider
+  model: string
+  apiKey?: string
+  baseUrl?: string
+}
+
 export interface AppConfig {
   wiki: {
     api: string
@@ -10,11 +19,8 @@ export interface AppConfig {
     index: string
     data: string
   }
-  ollama: {
-    url: string
-    chatModel: string
-    embedModel: string
-  }
+  chat: ProviderConfig
+  embedding: ProviderConfig
   rag: {
     chunkSize: number
     chunkOverlap: number

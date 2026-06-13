@@ -5,10 +5,11 @@ import type { LLMService } from '../../domain/repositories/llm-service.js'
 export class AILlmAdapter implements LLMService {
   constructor(private readonly model: LanguageModel) {}
 
-  async *generate(prompt: string): AsyncIterable<string> {
+  async *generate(system: string, userPrompt: string): AsyncIterable<string> {
     const result = streamText({
       model: this.model,
-      prompt,
+      system,
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
     for await (const token of result.textStream) {

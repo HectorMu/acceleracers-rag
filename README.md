@@ -43,8 +43,8 @@ https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
                          │             │                               │
                          │  ┌──────────▼─────────────────────────┐    │
                          │  │       Infrastructure                 │    │
-                         │  │  Ollama · Vectra · MiniSearch (BM25) │    │
-                         │  │  Fandom scraper · Cheerio            │    │
+                         │  │  Groq/Ollama · Vectra · MiniSearch  │    │
+                         │  │  Fandom scraper · Vercel AI SDK     │    │
                          │  └────────────────────────────────────┘    │
                          └──────────────────────────────────────────────┘
 ```
@@ -52,25 +52,25 @@ https://github.com/user-attachments/assets/76044fc0-5ada-4229-8b21-9ffdfab52612
 **Clean Architecture layers:**
 - `src/domain/` — Entities, repository interfaces, use cases (zero external deps)
 - `src/application/` — Service orchestration + config ports
-- `src/infrastructure/` — Adapters: Ollama (embedding + LLM), Vectra (vector store), MiniSearch (BM25), Fandom (scraper)
+- `src/infrastructure/` — Adapters: Groq/Ollama (Vercel AI SDK), Vectra (vector store), MiniSearch (BM25), Fandom (scraper)
 - `src/presentation/` — CLI REPL + Hono HTTP server with SSE streaming
 
 **RAG pipeline:**
 1. Scrape Fandom wiki → `data/corpus.json`
-2. Semantic chunking (paragraph-aware, not fixed-size)
+2. Semantic chunking (paragraph-aware, 1200 char chunks with 150 overlap)
 3. Embed chunks via Ollama `nomic-embed-text` → store in Vectra `LocalIndex`
-4. Hybrid retrieval: dense vector search + BM25 (MiniSearch) with RRF fusion
-5. MMR diversity reranking (Jaccard similarity, λ=0.6) → top K chunks
-6. Generate answer via Ollama `llama3.1:8b` with retrieved context + conversation history
+4. Hybrid retrieval: dense vector search + BM25 exact-match (MiniSearch) with RRF fusion
+5. MMR diversity reranking (Jaccard similarity, λ=0.4) → top 6 chunks
+6. Generate answer via Groq (or Ollama) with proper system role, retrieved context + conversation history
 
 ## Quick Start
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 22+
-- [Ollama](https://ollama.ai/) running locally with models:
+- [Groq](https://console.groq.com) API key (free tier) for chat, or [Ollama](https://ollama.ai/) running locally as alternative
+- For embeddings: [Ollama](https://ollama.ai/) with `nomic-embed-text`:
   ```bash
-  ollama pull llama3.1:8b
   ollama pull nomic-embed-text
   ```
 
@@ -112,15 +112,18 @@ docker compose up  # starts Ollama + app
 ```
 
 Environment variables (see `.env.example`):
-| Variable | Default |
-|---|---|
-| `OLLAMA_URL` | `http://localhost:11434` |
-| `CHAT_MODEL` | `llama3.1:8b` |
-| `EMBED_MODEL` | `nomic-embed-text` |
-| `PORT` | `3000` |
-| `CHUNK_SIZE` | `800` |
-| `CHUNK_OVERLAP` | `100` |
-| `TOP_K` | `4` |
+| Variable | Default | Description |
+|---|---|---|
+| `CHAT_PROVIDER` | `groq` | `groq` or `ollama` |
+| `CHAT_MODEL` | `llama-3.1-8b-instant` | Groq model; Ollama uses `llama3.1:8b` |
+| `GROQ_API_KEY` | — | Required when `CHAT_PROVIDER=groq` |
+| `EMBEDDING_PROVIDER` | `ollama` | `ollama` only (Groq has no embedding models) |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | Embedding model |
+| `OLLAMA_URL` | `http://localhost:11434` | Base URL for Ollama |
+| `CHUNK_SIZE` | `1200` | Characters per chunk |
+| `CHUNK_OVERLAP` | `150` | Overlap between chunks |
+| `TOP_K` | `6` | Chunks retrieved per query |
+| `PORT` | `3000` | Server port |
 
 ## API
 
@@ -162,7 +165,7 @@ The `error` event is sent if the LLM fails mid-stream.
 ### GET `/api/health`
 
 ```json
-{ "status": "ok", "ollama": true, "models": ["llama3.1:8b", "nomic-embed-text"] }
+{ "status": "ok", "chatProvider": "groq", "chatModel": "llama-3.1-8b-instant", "embeddingProvider": "ollama", "embeddingModel": "nomic-embed-text" }
 ```
 
 ## Data
@@ -178,10 +181,10 @@ Both are gitignored. Delete `data/corpus.json` to trigger a re-scrape.
 |---|---|
 | Server | Hono, TypeScript |
 | Client | React 19, Vite, Tailwind CSS v4, lucide-react |
-| LLM | Ollama (llama3.1:8b) |
-| Embeddings | Ollama (nomic-embed-text) |
+| LLM | Groq (llama-3.1-8b-instant) or Ollama (llama3.1:8b) via Vercel AI SDK |
+| Embeddings | Ollama (nomic-embed-text) via Vercel AI SDK |
 | Vector Store | Vectra (local) |
-| BM25 Search | MiniSearch |
+| BM25 Search | MiniSearch (exact-match, no fuzzy) |
 | Scraping | Cheerio, Fandom API |
 | Rendering | react-markdown, remark-gfm |
 

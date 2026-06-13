@@ -64,9 +64,9 @@ export function loadConfig(): AppConfig {
     },
     ...loadProviders(),
     rag: {
-      chunkSize: parseInt(process.env.CHUNK_SIZE || '800', 10),
-      chunkOverlap: parseInt(process.env.CHUNK_OVERLAP || '100', 10),
-      topK: parseInt(process.env.TOP_K || '4', 10),
+      chunkSize: parseInt(process.env.CHUNK_SIZE || '1200', 10),
+      chunkOverlap: parseInt(process.env.CHUNK_OVERLAP || '150', 10),
+      topK: parseInt(process.env.TOP_K || '6', 10),
     },
     server: {
       port: parseInt(process.env.PORT || '3000', 10),

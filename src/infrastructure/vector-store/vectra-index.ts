@@ -58,7 +58,7 @@ export class VectraIndexRepository implements IndexRepository {
 
     let bm25Results: { id: string; score: number }[] = []
     if (query && query.trim()) {
-      bm25Results = this.miniSearch.search(query, { fuzzy: 0.2, prefix: true, boost: { text: 2 } })
+      bm25Results = this.miniSearch.search(query, { fuzzy: 0.0, prefix: true, boost: { text: 2 } })
     }
 
     const denseMap = new Map<string, number>()

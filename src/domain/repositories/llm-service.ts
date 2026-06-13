@@ -1,3 +1,3 @@
 export interface LLMService {
-  generate(prompt: string): AsyncIterable<string>
+  generate(system: string, userPrompt: string): AsyncIterable<string>
 }

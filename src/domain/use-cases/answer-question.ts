@@ -4,26 +4,19 @@ import type { EmbeddingService } from '../repositories/embedding-service.js'
 import type { LLMService } from '../repositories/llm-service.js'
 import type { Chunk } from '../entities/chunk.js'
 
-const SYSTEM_PROMPT = `You are an expert on the Hot Wheels Acceleracers universe.
-Answer ONLY using the provided context. If the answer isn't there, say you don't have that information.
-Answer in the same language the user used. Use the conversation history for context.`
+const SYSTEM_PROMPT = `You are an expert on the Hot Wheels Acceleracers universe. Answer using the provided context.
 
-const HALLUCINATION_PROMPT = `You are a fact-checker. Your job is to check if each statement in the ANSWER is directly supported by the CONTEXT.
-For each statement, determine if it is SUPPORTED or UNSUPPORTED.
-Respond with ONLY a JSON array of objects: [{"statement": "...", "verdict": "SUPPORTED" | "UNSUPPORTED"}]
-
-CONTEXT:
-{context}
-
-ANSWER:
-{answer}
-
-JSON:`
+Rules:
+- Write complete, informative sentences. Do not just repeat a name or phrase.
+- If the context provides information, synthesize it into a clear answer.
+- If the context doesn't fully answer the question, answer with what you know and acknowledge what is missing.
+- If the context has nothing relevant, say "I don't have information about that in the Acceleracers wiki."
+- Answer in the same language the user used.`
 
 function mmrSelect(
   items: { chunk: Chunk; score: number }[],
   topK: number,
-  lambda = 0.6,
+  lambda = 0.4,
 ): { chunk: Chunk; score: number }[] {
   if (items.length <= topK) return items
 
@@ -92,7 +85,7 @@ export class AnswerQuestionUseCase {
     return [...userMessages, query.text].join(' ')
   }
 
-  private buildPrompt(query: Query, context: string): string {
+  private buildUserMessage(query: Query, context: string): string {
     let historyBlock = ''
     if (query.history && query.history.length > 0) {
       const recent = query.history.slice(-6)
@@ -100,7 +93,7 @@ export class AnswerQuestionUseCase {
         .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n')
     }
-    return `${SYSTEM_PROMPT}\n\nCONTEXT:\n${context}${historyBlock}\n\nQUESTION: ${query.text}\n\nANSWER:`
+    return `CONTEXT:\n${context}${historyBlock}\n\nQUESTION: ${query.text}\n\nANSWER:`
   }
 
   async execute(query: Query): Promise<Answer> {
@@ -116,10 +109,10 @@ export class AnswerQuestionUseCase {
 
     const reranked = mmrSelect(results, this.topK)
     const context = reranked.map(r => r.chunk.text).join('\n\n---\n\n')
-    const prompt = this.buildPrompt(query, context)
+    const userPrompt = this.buildUserMessage(query, context)
 
     let text = ''
-    for await (const token of this.llm.generate(prompt)) {
+    for await (const token of this.llm.generate(SYSTEM_PROMPT, userPrompt)) {
       text += token
     }
 
@@ -141,9 +134,9 @@ export class AnswerQuestionUseCase {
 
     const reranked = mmrSelect(results, this.topK)
     const context = reranked.map(r => r.chunk.text).join('\n\n---\n\n')
-    const prompt = this.buildPrompt(query, context)
+    const userPrompt = this.buildUserMessage(query, context)
 
-    for await (const token of this.llm.generate(prompt)) {
+    for await (const token of this.llm.generate(SYSTEM_PROMPT, userPrompt)) {
       yield token
     }
 

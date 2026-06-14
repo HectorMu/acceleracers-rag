@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs'
+import { config } from 'dotenv'
 import type { AppConfig, Provider } from '../../application/ports/config.js'
 
 function detectChatProvider(): Provider {
@@ -37,18 +37,7 @@ function loadProviders() {
 }
 
 export function loadConfig(): AppConfig {
-  if (existsSync('.env')) {
-    const env = readFileSync('.env', 'utf-8')
-    for (const line of env.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-      const eq = trimmed.indexOf('=')
-      if (eq === -1) continue
-      const key = trimmed.slice(0, eq).trim()
-      const val = trimmed.slice(eq + 1).trim()
-      process.env[key] = val
-    }
-  }
+  config()
 
   return {
     wiki: {
